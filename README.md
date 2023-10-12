@@ -9,6 +9,7 @@
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Project Focus](#project-focus)
+- [Approach](#approach)
 - [About The Dataset](#about-the-dataset)
 
 ## Project Overview
@@ -27,23 +28,25 @@
 ***This project is done using a combination of Python and SQL***
 
 ## About The Dataset
-[**Airlines Dataset**](https://www.kaggle.com/datasets/saadharoon27/airlines-dataset)
-<br>
+[**Airlines Dataset**](https://www.kaggle.com/datasets/saadharoon27/airlines-dataset)<br>
+
+**Tables:** <br>
+
 **Table: aircrafts_data**
-| **Column Name**     | **Description**                         |
-|-----------------    |-------------------------------------|
-| **aircraft_code**   | Code for the aircraft (3 characters) |
-| **model**           | Aircraft model in JSON format       |
-| **range**           | The range of the aircraft in integer format |
+  | **Column Name**     | **Description**                         |
+  |-----------------    |-------------------------------------|
+  | **aircraft_code**   | Code for the aircraft (3 characters) |
+  | **model**           | Aircraft model in JSON format       |
+  | **range**           | The range of the aircraft in integer format |
 
 **Table: airports_data**
-| **Column Name**     | **Description**                        |
-|-----------------    |------------------------------------|
-| **airport_code**    | Code for the airport (3 characters) |
-| **airport_name**    | Name of the airport in JSON format  |
-| **city**            | City where the airport is located in JSON format |
-| **coordinates**     | Geographic coordinates of the airport (point) |
-| **timezone**        | Timezone of the airport (text)     |
+  | **Column Name**     | **Description**                        |
+  |-----------------    |------------------------------------|
+  | **airport_code**    | Code for the airport (3 characters) |
+  | **airport_name**    | Name of the airport in JSON format  |
+  | **city**            | City where the airport is located in JSON format |
+  | **coordinates**     | Geographic coordinates of the airport (point) |
+  | **timezone**        | Timezone of the airport (text)     |
 
 **Table: boarding_passes**
 | **Column Name**     | **Description**                             |
