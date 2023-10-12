@@ -479,3 +479,105 @@ dtype: int64
 ```
 
 ***Basic Analysis***
+- How many planes have more than _**100 seats**_?
+  ```python
+  # Query to count the number of seats for each aircraft with more than 100 seats
+  pd.read_sql_query("""
+    SELECT aircraft_code, COUNT(*) AS num_seats
+    FROM seats
+    GROUP BY aircraft_code
+    HAVING num_seats > 100
+    """, connection)
+  ```
+  ***Output***
+  ```
+          aircraft_code  num_seats
+  0           319          116
+  1           320          140
+  2           321          170
+  3           733          130
+  4           763          222
+  5           773          402
+  ```
+- How the many _**number of tickets booked**_ and _**total amount**_ earned changed with the time.
+  ```python
+  # Execute an SQL query to retrieve data from 'tickets' table and join it with 'bookings' table
+  tickets_query = """
+  SELECT *
+  FROM tickets
+  INNER JOIN bookings ON tickets.book_ref = bookings.book_ref
+  """
+  
+  # Use pandas to execute the SQL query and retrieve the results
+  tickets = pd.read_sql_query(tickets_query, connection)
+  
+  # Convert 'book_date' column to a datetime object
+  tickets['book_date'] = pd.to_datetime(tickets['book_date'])
+  
+  # Extract the date part from 'book_date' and create a new 'date' column
+  tickets['date'] = tickets['book_date'].dt.date
+  
+  # Group the data by 'date' and count the number of occurrences
+  line = tickets.groupby('date')[['date']].count()
+  ```
+- Plotting A _**Line Graph To Visualize The Trend Of Number Of Booking**_
+  ```python
+  # Create a figure for the plot with specified dimensions
+  plt.figure(figsize=(18, 6))
+  
+  # Create a line plot using the date index and 'date' column data
+  # Add markers on data points in the shape of '^' for visibility
+  plt.plot(line.index, line['date'], marker='^')
+  
+  # Set the x-axis label
+  plt.xlabel('Date', fontsize=20)
+  
+  # Set the y-axis label
+  plt.ylabel('Tickets', fontsize=20)
+  
+  # Add a grid to the plot with gridlines in blue color
+  plt.grid('b')
+  
+  # Display the plot
+  plt.show()
+  ```
+  ***Output***
+  ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/adecd6b4-1f0c-4a12-9029-aea86e157acf)
+
+ - Plotting **A Line Graph To Visualize The Trend Of Total Amount _(Revenue)_**
+   ```python
+   # Read data from the 'bookings' table in the database
+   bookings = pd.read_sql_query("""SELECT * FROM bookings""", connection)
+    
+   # Convert the 'book_date' column to a datetime format
+   bookings['book_date'] = pd.to_datetime(bookings['book_date'])
+    
+   # Extract the date portion of the 'book_date' and create a new 'date' column
+   bookings['date'] = bookings['book_date'].dt.date
+    
+   # Group the data by 'date' and calculate the sum of 'total_amount' for each date
+   line2 = bookings.groupby('date')[['total_amount']].sum()
+    
+   # Create a figure for the plot with specified dimensions
+   plt.figure(figsize=(18, 6))
+    
+   # Create a line plot using the date index and 'total_amount' column data
+   # Add markers on data points in the shape of '^' for visibility
+   plt.plot(line2.index, line2['total_amount'], marker='^')
+    
+   # Set the x-axis label
+   plt.xlabel('Date', fontsize=20)
+    
+   # Set the y-axis label
+   plt.ylabel('Total Amount Earned', fontsize=20)
+    
+   # Add a grid to the plot with gridlines in cyan color
+   plt.grid('c')
+    
+   # Display the plot
+   plt.show()
+   ```
+   ***Output***
+  ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/d06975cd-a887-4df1-aa0e-feb0ad27b3af)
+
+  - Calculate the average charges for each aircraft with different fare conditions
