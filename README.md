@@ -12,6 +12,8 @@
 - [Approach](#approach)
 - [About The Dataset](#about-the-dataset)
 - [Code](#code)
+- [Analysis](#analysis)
+- [Conclusion](#conclusion)
 
 ## Project Overview
 **A company** operates a diverse fleet of aircraft ranging from small business jets to medium–sized machines. They have been providing high-quality air transportation services to their clients for several years, and their primary focus is to ensure a safe, comfortable, convenient journey for our passengers. However, they are currently facing challenges due to several factors such as **stricter environmental regulations, higher flight taxes, increased interest rates, rising fuel prices**, and a tight labour market resulting in increased labour costs. As a result, the company’s **profitability** is under pressure, and they are seeking ways to address this issue. To tackle this challenge, they are looking to conduct an analysis of their database to find ways to **increase their occupancy rate**, which can help boost the **average profit earned per seat**.<br>
@@ -578,6 +580,227 @@ dtype: int64
    plt.show()
    ```
    ***Output***
-  ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/d06975cd-a887-4df1-aa0e-feb0ad27b3af)
+  ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/ef850b11-6e8d-4c1f-93df-23ad77c119b8)
 
-  - Calculate the average charges for each aircraft with different fare conditions
+
+  - Calculating the **average charges for each aircraft with different fare conditions**
+    ```python
+    # Query the database to calculate the average charges for each aircraft with different fare conditions
+    df = pd.read_sql_query("""
+        SELECT fare_conditions, aircraft_code, AVG(amount) 
+        FROM ticket_flights
+        JOIN flights ON ticket_flights.flight_id = flights.flight_id
+        GROUP BY aircraft_code, fare_conditions
+        """, connection)
+    
+    # Display the result
+    df
+    ```
+    _**Output**_
+    ```
+           fare_conditions   aircraft_code    avg(amount)
+    0         Business           319         113550.557703
+    1          Economy           319         38311.402347
+    2         Business           321         34435.662664
+    3          Economy           321         11534.974764
+    4         Business           733         41865.626175
+    5          Economy           733         13985.152000
+    6         Business           763         82839.842866
+    7          Economy           763         27594.721829
+    8         Business           773         57779.909435
+    9          Comfort           773         32740.552889
+    10         Economy           773         19265.225693
+    11         Economy           CN1          6568.552345
+    12         Economy           CR2         13207.661102
+    13        Business           SU9         33487.849829
+    14         Economy           SU9         11220.183400
+    ```
+
+  - ***Visualising The Extracted Data***
+    ```python
+    sns.barplot(data = df, x = 'aircraft_code', y = 'avg(amount)', hue = 'fare_conditions')
+    ```
+    ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/6575ffd4-b528-4e4f-878b-e76164191e65)
+
+_**Analysing Occupancy Rate**_
+- For each aircraft, _**calculating the total revenue per year**_ and _**the average revenue per ticket**_
+  ```python
+  # Query the database to calculate the total revenue per year and the average revenue per ticket for each aircraft
+  pd.read_sql_query("""
+      SELECT aircraft_code, ticket_count, total_revenue, total_revenue/ticket_count AS avg_revenue_per_ticket 
+      FROM (
+          SELECT aircraft_code, COUNT(*) AS ticket_count, SUM(amount) AS total_revenue 
+          FROM ticket_flights
+          JOIN flights ON ticket_flights.flight_id = flights.flight_id 
+          GROUP BY aircraft_code
+      )
+      """, connection)
+    ```
+   ***Output***
+  ```
+    aircraft_code  ticket_count  total_revenue  avg_revenue_per_ticket
+  0           319         52853     2706163100                   51201
+  1           321        107129     1638164100                   15291
+  2           733         86102     1426552100                   16568
+  3           763        124774     4371277100                   35033
+  4           773        144376     3431205500                   23765
+  5           CN1         14672       96373800                    6568
+  6           CR2        150122     1982760500                   13207
+  7           SU9        365698     5114484700                   13985
+  ```
+- **Calculating The Average Occupancy Per Aircraft**
+  ```python
+    # Query to calculate the occupancy rate for each aircraft
+  occupancy_rate = pd.read_sql_query("""
+      SELECT a.aircraft_code, AVG(a.seats_count) AS booked_seats, b.num_seats, 
+             AVG(a.seats_count)/b.num_seats AS occupancy_rate
+      FROM (
+          SELECT aircraft_code, flights.flight_id, COUNT(*) AS seats_count
+          FROM boarding_passes
+          INNER JOIN flights
+          ON boarding_passes.flight_id = flights.flight_id
+          GROUP BY aircraft_code, flights.flight_id
+      ) AS a
+      INNER JOIN (
+          SELECT aircraft_code, COUNT(*) as num_seats
+          FROM seats
+          GROUP BY aircraft_code
+      ) AS b
+      ON a.aircraft_code = b.aircraft_code
+      GROUP BY a.aircraft_code
+      """, connection)
+  
+  # Output: DataFrame displaying the aircraft_code, booked_seats, num_seats, and occupancy_rate
+  occupancy_rate
+  ```
+   ***Output***
+  ```
+      aircraft_code  booked_seats  num_seats  occupancy_rate
+  0           319     53.583181        116        0.461924
+  1           321     88.809231        170        0.522407
+  2           733     80.255462        130        0.617350
+  3           763    113.937294        222        0.513231
+  4           773    264.925806        402        0.659019
+  5           CN1      6.004431         12        0.500369
+  6           CR2     21.482847         50        0.429657
+  7           SU9     56.812113         97        0.585692
+  ```
+- Calculating By How Much **The Total Annual Turnover** Could Increase By Giving All Aircraft A **_10%_ Higher Occupancy Rate**.
+  ```python
+    # Adding a column to occupancy_rate DataFrame with an increased occupancy rate
+    occupancy_rate['inc occupancy rate'] = occupancy_rate['occupancy_rate'] + occupancy_rate['occupancy_rate'] * 0.1
+  
+    # Setting the float format to a string (disabling scientific notation)
+    pd.set_option("display.float_format", str)
+    ```
+    ```python
+    total_revenue = pd.read_sql_query("""SELECT aircraft_code, SUM(amount) AS total_revenue FROM ticket_flights
+                          JOIN flights ON ticket_flights.flight_id = flights.flight_id
+                          GROUP BY aircraft_code""", connection)
+  total_revenue
+  
+  occupancy_rate['inc Total Annual Turnover'] = (total_revenue['total_revenue']/occupancy_rate['occupancy_rate'])*occupancy_rate['inc occupancy rate']
+  occupancy_rate
+  ```
+  ```python
+    # Query to calculate the total revenue for each aircraft
+  total_revenue = pd.read_sql_query("""
+      SELECT aircraft_code, SUM(amount) AS total_revenue
+      FROM ticket_flights
+      JOIN flights ON ticket_flights.flight_id = flights.flight_id
+      GROUP BY aircraft_code
+      """, connection)
+  
+  # Display the total revenue DataFrame
+  total_revenue
+  
+  # Calculate and add a new column 'inc Total Annual Turnover' in the 'occupancy_rate' DataFrame
+  occupancy_rate['inc Total Annual Turnover'] = (total_revenue['total_revenue'] / occupancy_rate['occupancy_rate']) * occupancy_rate['inc occupancy rate']
+  
+  # Display the updated 'occupancy_rate' DataFrame
+  occupancy_rate
+  ```
+  ```
+      aircraft_code       booked_seats  num_seats      occupancy_rate  \
+  0           319  53.58318098720292        116 0.46192397402761143   
+  1           321  88.80923076923077        170  0.5224072398190045   
+  2           733  80.25546218487395        130   0.617349709114415   
+  3           763 113.93729372937294        222  0.5132310528350132   
+  4           773  264.9258064516129        402   0.659019419033863   
+  5           CN1  6.004431314623338         12  0.5003692762186115   
+  6           CR2  21.48284690220174         50 0.42965693804403476   
+  7           SU9  56.81211267605634         97  0.5856918832583128   
+  
+     inc occupancy rate  inc Total Annual Turnover  
+  0  0.5081163714303726               2976779410.0  
+  1   0.574647963800905               1801980510.0  
+  2  0.6790846800258565         1569207310.0000002  
+  3  0.5645541581185146               4808404810.0  
+  4  0.7249213609372492               3774326050.0  
+  5  0.5504062038404727         106011180.00000001  
+  6  0.4726226318484382               2181036550.0  
+  7   0.644261071584144          5625933169.999999
+  ```
+## Analysis
+The analysis of data provides insights into the number of planes with more than **100 seats**, how the number of tickets booked and total amount earned changed over time, and the *average fare* for each aircraft with different fare conditions. These findings will be useful in developing strategies to increase *occupancy rates* and optimize pricing for each aircraft. **Table 1** shows the aircraft with more than **100 seats** and the actual count of the seats.<br>
+
+
+***Table 1***
+| **Aircraft Code** | **Number Of Seats** |
+|---------------|-----------------|
+| 319           | 116             |
+| 320           | 140             |
+| 321           | 170             |
+| 733           | 130             |
+| 763           | 222             |
+| 773           | 402             |
+
+In order to gain a deeper understanding of the trend of ticket bookings and revenue earned through those bookings, we have utilized a line chart visualization. Upon analysis of the chart, we observe that the number of tickets booked exhibits a gradual increase from **June 22nd to July 7th**, followed by a relatively stable pattern from *July 8th until August*, with a noticeable peak in ticket bookings where the highest number of tickets were booked on a single day. It is important to note that the *revenue earned* by the company from these bookings is closely tied to the number of tickets booked. Therefore, we can see a similar trend in the *total revenue* earned by the company throughout the analyzed time period. These findings suggest that further exploration of the factors contributing to the peak in ticket bookings may be beneficial for increasing overall revenue and optimizing operational strategies.<br>
+
+_**Figure 1**_
+![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/adecd6b4-1f0c-4a12-9029-aea86e157acf)
+
+_**Figure 2**_
+  ![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/77921a66-c81b-48ec-b01a-b530a449ee24)
+
+_**Figure 3**_<br>
+![image](https://github.com/saadharoon27/Airline-Data-Analysis-SQL-Project/assets/147087623/6575ffd4-b528-4e4f-878b-e76164191e65)
+
+We were able to generate a bar graph to graphically compare the data after we completed the computations for the *average costs* associated with different fare conditions for each aircraft. The graph **Figure 3** shows data for three types of fares: *business*, *economy*, and *comfort*. It is worth mentioning that the *comfort class* is available on only one aircraft, the **773**. The **CN1** and **CR2** planes, on the other hand, only provide the *economy class*. When different pricing circumstances within each aircraft are compared, the charges for *business class* are consistently greater than those for *economy class*. This trend may be seen across all planes, regardless of fare conditions. <br>
+
+_**Analysing Occupancy Rate**_ <br>
+Airlines must thoroughly analyze their *revenue streams* in order to maximize *profitability*. The *overall income per year* and *average revenue per ticket* for each aircraft are important metrics to consider. Airlines may use this information to determine which *aircraft types* and *itineraries* generate the most *income* and alter their operations appropriately. This research can also assist in identifying potential for *pricing optimization* and allocating resources to more *profitable routes*. The below **Figure 4** shows the *total revenue*, *total tickets*, and *average revenue* made per ticket for each *aircraft*. The aircraft with the highest *total revenue* is **SU9**, and from **Figure 3**, it can be seen that the price of the *business class* and *economy class* is the lowest in this aircraft. This can be the reason that most of the people bought this aircraft ticket as its cost is less compared to others. The aircraft with the least *total revenue* is **CN1**, and the possible reason behind this is it only offers *economy class* with very *least price*, and it might be because of its poor conditions or *less facilities*.
+<br>
+
+***Figure 4***
+|  **SR**  | **aircraft_code** | **total_count** | **ticket_revenue** | **avg_revenue_per_ticket** |
+| --- | ------------- | ----------- | -------------- | ------------------------ |
+|  0  |      319      |    52853    |   2706163100   |          51201           |
+|  1  |      321      |   107129    |   1638164100   |          15291           |
+|  2  |      733      |    86102    |   1426552100   |          16568           |
+|  3  |      763      |   124774    |   4371277100   |          35033           |
+|  4  |      773      |   144376    |   3431205500   |          23765           |
+|  5  |      CN1      |    14672    |    96373800    |          6568            |
+|  6  |      CR2      |   150122    |   1982760500   |          13207           |
+|  7  |      SU9      |   365698    |   5114484700   |          13985           |
+
+**The average occupancy per aircraft** is another critical number to consider. Airlines may measure how successfully they fill their seats and discover chances to boost **the occupancy rate** by using this metric. Higher **occupancy rates** can help airlines increase revenue and profitability while lowering operational expenses associated with vacant seats. **Pricing strategy**, **airline schedules**, and **customer satisfaction** are all factors that might influence **occupancy rates**. The below **Figure 5** shows the **average booked seats** from the total number of seats for each aircraft. The **occupancy rate** is calculated by dividing the **booked seats** by the total number of seats. Higher **occupancy rate** means the aircraft seats are more booked and only a few seats are left unbooked.<br>
+
+***Figure 5***
+| **SR**  | **aircraft_code** | **booked_seats** | **num_seats** | **occupancy_rate** |
+|---|--------------|--------------|-----------|----------------|
+| 0 | 319          | 53.583181    | 116       | 0.461924       |
+| 1 | 321          | 88.809231    | 170       | 0.522407       |
+| 2 | 733          | 80.255462    | 130       | 0.617350       |
+| 3 | 763          | 113.937294   | 222       | 0.513231       |
+| 4 | 773          | 264.925806   | 402       | 0.659019       |
+| 5 | CN1          | 6.004431     | 12        | 0.500369       |
+| 6 | CR2          | 21.482847    | 50        | 0.429657       |
+| 7 | SU9          | 56.812113    | 97        | 0.585692       |
+
+Airlines can assess how much their *total yearly turnover* could improve by providing all aircraft a *10% higher occupancy rate* to further examine the *possible benefits* of raising occupancy rates. This research can assist airlines in determining the *financial impact* of boosting occupancy rates and if it is a *realistic strategy*. Airlines may enhance occupancy rates and revenue while delivering greater value and service to consumers by optimizing *pricing tactics* and other operational considerations. The below figure shows how the *total revenue increased* after increasing the *occupancy rate by 10%* and it gives the result that it will *increase gradually* so airlines should be more focused on the *pricing strategies*.
+
+## Conclusion
+To summarize, analyzing revenue data such as *total revenue per year*, *average revenue per ticket*, and *average occupancy per aircraft* is critical for airlines seeking to maximize profitability. Airlines can find areas for improvement and modify their *pricing* and *route plans* as a result of assessing these indicators. A *greater occupancy rate* is one important feature that can enhance profitability since it allows airlines to maximize revenue while minimizing costs associated with vacant seats. The airline should revise the *price* for each aircraft as the *lower price* and *high price* is also the factor that people are not buying tickets from those aircrafts. They should decide the *reasonable price* according to the *condition* and *facility* of the aircraft and it should not be very *cheap* or *high*.
+
+Furthermore, boosting occupancy rates should not come at the price of consumer *happiness* or *safety*. Airlines must strike a balance between the necessity for *profit* and the significance of delivering *high-quality service* and upholding *safety regulations*. Airlines may achieve long-term success in a highly competitive business by adopting a *data-driven strategy* to *revenue analysis* and *optimization*.
